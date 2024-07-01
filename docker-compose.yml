@@ -1,0 +1,100 @@
+version: '3.8'
+
+services:
+  mysql:
+    image: dcoinfdev/mysql-server:v1.0.0
+    restart: always
+    container_name: ${MYSQL_CONTAINER_NAME}
+    ports:
+      - "3306:3306"
+    volumes:
+      - ${MYSQL_DATA_PATH}:/var/lib/mysql
+      - ${MYSQL_DATA_RUN}:/var/run/zabbix
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+    networks:
+      zabbix-network:
+        ipv4_address: 10.10.112.2  
+
+  zabbix-server:
+    image: dcoinfdev/zabbix-server:v1.0.0
+    restart: always
+    container_name: ${ZABBIX_SERVER_CONTAINER_NAME}
+    ports:
+      - "10051:10051"
+    volumes:
+      - ${ZABBIX_SERVER_DATA_PATH}:/var/lib/zabbix
+      - ${ZABBIX_SERVER_DATA_RUN}:/var/run/zabbix
+      - ${ZABBIX_SERVER_DATA_LOG}:/var/log/zabbix
+    environment:
+      DB_SERVER_HOST: ${DB_SERVER_HOST}
+      DB_SERVER_PORT: ${DB_SERVER_PORT}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+    depends_on:
+      - mysql
+    networks:
+      zabbix-network:
+        ipv4_address: 10.10.112.3
+    
+  zabbix-web:
+    image: dcoinfdev/zabbix-web:v1.0.0
+    restart: always
+    container_name: ${ZABBIX_WEB_CONTAINER_NAME}
+    ports:
+      - "8080:8080"
+    volumes:
+      - ${ZABBIX_WEB_DATA_PATH}:/usr/share/zabbix
+      - ${ZABBIX_WEB_DATA_RUN}:/var/run/zabbix
+      - ${ZABBIX_WEB_DATA_LOG}:/var/log/zabbixX
+    environment:
+      DB_SERVER_HOST: ${DB_SERVER_HOST}
+      DB_SERVER_PORT: ${DB_SERVER_PORT}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      ZBX_SERVER_HOST: ${ZBX_SERVER_HOST}
+      ZBX_SERVER_PORT: ${ZBX_SERVER_PORT}
+      PHP_TZ: ${PHP_TZ}
+    depends_on:
+      - mysql
+      - zabbix-server
+    networks:
+      zabbix-network:
+        ipv4_address: 10.10.112.4
+    
+  grafana:
+    image: grafana/grafana:latest
+    restart: always
+    container_name: ${GRAFANA_CONTAINER_NAME}
+    ports:
+      - "3000:3000"
+    volumes:
+      - ${GRAFANA_DATA_PATH}:/var/lib/grafana
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GF_SECURITY_ADMIN_USER}
+      GF_SECURITY_ADMIN_PASSWORD: ${GF_SECURITY_ADMIN_PASSWORD}
+    networks:
+      zabbix-network:
+        ipv4_address: 10.10.112.5
+  
+volumes:
+  mysql_data:
+  zabbix_server_data:
+  zabbix_web_data:
+  grafana_data:
+  openvpn-data:
+  backups:
+
+networks:
+  zabbix-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.10.112.0/20
