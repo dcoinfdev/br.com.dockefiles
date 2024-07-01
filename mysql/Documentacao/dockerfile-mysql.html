@@ -1,0 +1,174 @@
+﻿<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>dockerfile-mysql</title>
+  <link rel="stylesheet" href="https://stackedit.io/style.css" />
+</head>
+
+<body class="stackedit">
+  <div class="stackedit__html"><h2 id="documentação-do-dockerfile-para-mysql-com-zabbix-agent">Documentação do Dockerfile para MySQL com Zabbix Agent</h2>
+<h3 id="introdução">Introdução</h3>
+<p>Este documento fornece uma visão detalhada da construção de uma imagem Docker que combina MySQL 8.0.37 com o Zabbix Agent. Este Dockerfile foi desenvolvido levando em consideração as melhores práticas de DevOps e segurança. Abaixo, abordaremos cada seção do Dockerfile e explicaremos o propósito e a importância de cada comando.</p>
+<h3 id="conteúdo-do-dockerfile">Conteúdo do Dockerfile</h3>
+<pre class=" language-dockerfile"><code class="prism  language-dockerfile">
+<span class="token comment"># Use a imagem base do MySQL 8.0.37-Debian</span>
+
+<span class="token keyword">FROM</span> mysql<span class="token punctuation">:</span>8.0.37<span class="token punctuation">-</span>bookworm
+
+<span class="token comment"># Instale as dependências necessárias para o Zabbix Agent e o wget</span>
+
+<span class="token keyword">RUN</span> apt<span class="token punctuation">-</span>get update \
+
+&amp;&amp; apt<span class="token punctuation">-</span>get install <span class="token punctuation">-</span>y wget gnupg2 \
+
+&amp;&amp; wget https<span class="token punctuation">:</span>//repo.zabbix.com/zabbix<span class="token punctuation">-</span>official<span class="token punctuation">-</span>repo.key \
+
+&amp;&amp; apt<span class="token punctuation">-</span>key add zabbix<span class="token punctuation">-</span>official<span class="token punctuation">-</span>repo.key \
+
+&amp;&amp; echo <span class="token string">"deb https://repo.zabbix.com/zabbix/6.5/debian bookworm main"</span> <span class="token punctuation">&gt;</span> /etc/apt/sources.list.d/zabbix.list \
+
+&amp;&amp; apt<span class="token punctuation">-</span>get update \
+
+&amp;&amp; apt<span class="token punctuation">-</span>get install <span class="token punctuation">-</span>y zabbix<span class="token punctuation">-</span>agent \
+
+&amp;&amp; rm <span class="token punctuation">-</span>rf /var/lib/apt/lists/*
+
+<span class="token comment"># Crie o diretório necessário para o PID do Zabbix Agent</span>
+
+<span class="token keyword">RUN</span> mkdir <span class="token punctuation">-</span>p /var/run/zabbix &amp;&amp; chown zabbix<span class="token punctuation">:</span>zabbix /var/run/zabbix
+
+<span class="token comment"># Copie o arquivo de configuração do Zabbix Agent para dentro do contêiner</span>
+
+<span class="token keyword">COPY</span> zabbix_agentd.conf /etc/zabbix/zabbix_agentd.conf
+
+<span class="token comment"># Copie o script de entrada para o contêiner e defina permissões</span>
+
+<span class="token keyword">COPY</span> entrypoint.sh /usr/local/bin/entrypoint.sh
+
+<span class="token keyword">RUN</span> chmod +x /usr/local/bin/entrypoint.sh
+
+<span class="token comment"># Exponha a porta padrão do Zabbix Agent</span>
+
+<span class="token keyword">EXPOSE</span> 10050
+
+<span class="token comment"># Defina o script de entrada como o comando inicial</span>
+
+<span class="token keyword">ENTRYPOINT</span> <span class="token punctuation">[</span><span class="token string">"/usr/local/bin/entrypoint.sh"</span><span class="token punctuation">]</span>
+
+</code></pre>
+<h3 id="explicação-detalhada">Explicação Detalhada</h3>
+<h4 id="escolha-da-imagem-base">1. Escolha da Imagem Base</h4>
+<pre class=" language-dockerfile"><code class="prism  language-dockerfile">
+<span class="token keyword">FROM</span> mysql<span class="token punctuation">:</span>8.0.37<span class="token punctuation">-</span>bookworm
+
+</code></pre>
+<p>A imagem base escolhida é o MySQL 8.0.37, baseada no Debian Bookworm. Esta escolha oferece uma combinação de um banco de dados robusto e um sistema operacional estável.</p>
+<h4 id="instalação-de-dependências">2. Instalação de Dependências</h4>
+<pre class=" language-dockerfile"><code class="prism  language-dockerfile">
+<span class="token keyword">RUN</span> apt<span class="token punctuation">-</span>get update \
+
+&amp;&amp; apt<span class="token punctuation">-</span>get install <span class="token punctuation">-</span>y wget gnupg2 \
+
+&amp;&amp; wget https<span class="token punctuation">:</span>//repo.zabbix.com/zabbix<span class="token punctuation">-</span>official<span class="token punctuation">-</span>repo.key \
+
+&amp;&amp; apt<span class="token punctuation">-</span>key add zabbix<span class="token punctuation">-</span>official<span class="token punctuation">-</span>repo.key \
+
+&amp;&amp; echo <span class="token string">"deb https://repo.zabbix.com/zabbix/6.5/debian bookworm main"</span> <span class="token punctuation">&gt;</span> /etc/apt/sources.list.d/zabbix.list \
+
+&amp;&amp; apt<span class="token punctuation">-</span>get update \
+
+&amp;&amp; apt<span class="token punctuation">-</span>get install <span class="token punctuation">-</span>y zabbix<span class="token punctuation">-</span>agent \
+
+&amp;&amp; rm <span class="token punctuation">-</span>rf /var/lib/apt/lists/*
+
+</code></pre>
+<p>Este bloco de comandos realiza as seguintes ações:</p>
+<ul>
+<li>
+<p>Atualiza a lista de pacotes (<code>apt-get update</code>).</p>
+</li>
+<li>
+<p>Instala o <code>wget</code> e o <code>gnupg2</code> necessários para baixar e adicionar a chave GPG do repositório Zabbix.</p>
+</li>
+<li>
+<p>Baixa e adiciona a chave GPG do repositório oficial do Zabbix.</p>
+</li>
+<li>
+<p>Adiciona o repositório Zabbix à lista de fontes (<code>sources.list.d</code>).</p>
+</li>
+<li>
+<p>Atualiza novamente a lista de pacotes para incluir o repositório Zabbix.</p>
+</li>
+<li>
+<p>Instala o Zabbix Agent.</p>
+</li>
+<li>
+<p>Remove a lista de pacotes (<code>/var/lib/apt/lists/*</code>) para reduzir o tamanho da imagem e melhorar a segurança.</p>
+</li>
+</ul>
+<h4 id="criação-de-diretórios">3. Criação de Diretórios</h4>
+<pre class=" language-dockerfile"><code class="prism  language-dockerfile">
+<span class="token keyword">RUN</span> mkdir <span class="token punctuation">-</span>p /var/run/zabbix &amp;&amp; chown zabbix<span class="token punctuation">:</span>zabbix /var/run/zabbix
+
+</code></pre>
+<p>Este comando cria o diretório <code>/var/run/zabbix</code> e define as permissões apropriadas para o usuário <code>zabbix</code>, garantindo que o Zabbix Agent tenha acesso adequado para criar seu arquivo PID.</p>
+<h4 id="configuração-do-zabbix-agent">4. Configuração do Zabbix Agent</h4>
+<pre class=" language-dockerfile"><code class="prism  language-dockerfile">
+<span class="token keyword">COPY</span> zabbix_agentd.conf /etc/zabbix/zabbix_agentd.conf
+
+</code></pre>
+<p>Copia o arquivo de configuração do Zabbix Agent (<code>zabbix_agentd.conf</code>) do sistema host para dentro do contêiner no diretório <code>/etc/zabbix/</code>.</p>
+<h4 id="script-de-entrada">5. Script de Entrada</h4>
+<pre class=" language-dockerfile"><code class="prism  language-dockerfile">
+<span class="token keyword">COPY</span> entrypoint.sh /usr/local/bin/entrypoint.sh
+
+<span class="token keyword">RUN</span> chmod +x /usr/local/bin/entrypoint.sh
+
+</code></pre>
+<ul>
+<li>
+<p>Copia o script de entrada (<code>entrypoint.sh</code>) para o diretório <code>/usr/local/bin/</code> dentro do contêiner.</p>
+</li>
+<li>
+<p>Define permissões executáveis para o script (<code>chmod +x</code>).</p>
+</li>
+</ul>
+<h4 id="exposição-da-porta">6. Exposição da Porta</h4>
+<pre class=" language-dockerfile"><code class="prism  language-dockerfile">
+<span class="token keyword">EXPOSE</span> 10050
+
+</code></pre>
+<p>Exponha a porta 10050, que é a porta padrão para comunicação do Zabbix Agent.</p>
+<h4 id="definição-do-entrypoint">7. Definição do Entrypoint</h4>
+<pre class=" language-dockerfile"><code class="prism  language-dockerfile">
+<span class="token keyword">ENTRYPOINT</span> <span class="token punctuation">[</span><span class="token string">"/usr/local/bin/entrypoint.sh"</span><span class="token punctuation">]</span>
+
+</code></pre>
+<p>Define o script de entrada (<code>entrypoint.sh</code>) como o comando inicial a ser executado quando o contêiner é iniciado.</p>
+<h3 id="melhorias-e-considerações-de-segurança">Melhorias e Considerações de Segurança</h3>
+<ol>
+<li>
+<p><strong>Minimize o uso de RUN:</strong> Sempre que possível, combine múltiplos comandos <code>RUN</code> em uma única instrução para reduzir o número de camadas na imagem final.</p>
+</li>
+<li>
+<p><strong>Reduza o Tamanho da Imagem:</strong> Utilize o comando <code>rm -rf /var/lib/apt/lists/*</code> após a instalação de pacotes para remover os caches de pacotes e reduzir o tamanho da imagem.</p>
+</li>
+<li>
+<p><strong>Gerenciamento de Permissões:</strong> Certifique-se de que os arquivos e diretórios importantes tenham as permissões corretas para evitar problemas de segurança.</p>
+</li>
+<li>
+<p><strong>Arquivo de Configuração:</strong> Mantenha o arquivo de configuração (<code>zabbix_agentd.conf</code>) fora do repositório de código-fonte para evitar a exposição de informações sensíveis.</p>
+</li>
+<li>
+<p><strong>Script de Entrada:</strong> Garanta que o script de entrada (<code>entrypoint.sh</code>) inclua verificações de erro e práticas seguras de manuseio de dados.</p>
+</li>
+</ol>
+<h3 id="conclusão">Conclusão</h3>
+<p>Este Dockerfile configura uma imagem combinada de MySQL com o Zabbix Agent, seguindo as melhores práticas de DevOps e segurança. A documentação detalhada de cada comando ajuda a entender o propósito e a importância de cada etapa no processo de construção da imagem. Esta abordagem garante uma configuração robusta, segura e eficiente para monitoramento com o Zabbix Agent em um ambiente Dockerizado.</p>
+</div>
+</body>
+
+</html>
