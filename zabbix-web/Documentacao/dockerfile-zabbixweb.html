@@ -1,0 +1,128 @@
+﻿<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>dockerfile-zabbixweb</title>
+  <link rel="stylesheet" href="https://stackedit.io/style.css" />
+</head>
+
+<body class="stackedit">
+  <div class="stackedit__html"><h3 id="documentação-para-dockerfile-do-contêiner-zabbix-web-nginx-mysql-com-agente-zabbix">Documentação para Dockerfile do Contêiner Zabbix Web Nginx MySQL com Agente Zabbix</h3>
+<h4 id="visão-geral"><strong>Visão Geral</strong></h4>
+<p>Este documento detalha a criação e configuração de um contêiner Docker utilizando a imagem <code>zabbix/zabbix-web-nginx-mysql:ubuntu-6.4-latest</code>. O contêiner inclui a instalação do agente Zabbix, configurações de segurança, e boas práticas de DevOps.</p>
+<h4 id="conteúdo-do-dockerfile"><strong>Conteúdo do Dockerfile</strong></h4>
+<pre class=" language-dockerfile"><code class="prism  language-dockerfile"><span class="token comment"># Base image</span>
+<span class="token keyword">FROM</span> zabbix/zabbix<span class="token punctuation">-</span>web<span class="token punctuation">-</span>nginx<span class="token punctuation">-</span>mysql<span class="token punctuation">:</span>ubuntu<span class="token punctuation">-</span>6.4<span class="token punctuation">-</span>latest
+
+<span class="token comment"># Definir o usuário root temporariamente para instalações</span>
+<span class="token keyword">USER</span> root
+
+<span class="token comment"># Atualizar o sistema e instalar pacotes adicionais, incluindo o agente Zabbix</span>
+<span class="token keyword">RUN</span> apt<span class="token punctuation">-</span>get update \
+    &amp;&amp; apt<span class="token punctuation">-</span>get install <span class="token punctuation">-</span>y zabbix<span class="token punctuation">-</span>agent \
+    &amp;&amp; rm <span class="token punctuation">-</span>rf /var/lib/apt/lists/*
+
+<span class="token comment"># Crie o diretório necessário para o PID do Zabbix Agent</span>
+<span class="token keyword">RUN</span> mkdir <span class="token punctuation">-</span>p /var/run/zabbix &amp;&amp; chown zabbix<span class="token punctuation">:</span>zabbix /var/run/zabbix \
+    &amp;&amp; mkdir <span class="token punctuation">-</span>p /var/log/zabbix &amp;&amp; chown <span class="token punctuation">-</span>R zabbix<span class="token punctuation">:</span>zabbix /var/log/zabbix 
+
+<span class="token comment"># Copie o arquivo de configuração do Zabbix Agent para dentro do contêiner</span>
+<span class="token keyword">COPY</span> zabbix_agentd.conf /etc/zabbix/zabbix_agentd.conf
+
+<span class="token comment"># Copie o script de entrada para o contêiner e defina permissões</span>
+<span class="token keyword">COPY</span> entrypoint.sh /usr/local/bin/entrypoint.sh
+<span class="token keyword">RUN</span> chmod +x /usr/local/bin/entrypoint.sh
+
+<span class="token comment"># Remover privilégios de root e voltar ao usuário padrão</span>
+<span class="token keyword">USER</span> 1997
+
+<span class="token comment"># Expor portas, se necessário (por exemplo, para o agente Zabbix)</span>
+<span class="token keyword">EXPOSE</span> 10050
+
+<span class="token comment"># Iniciar o serviço do agente Zabbix</span>
+<span class="token keyword">ENTRYPOINT</span> <span class="token punctuation">[</span><span class="token string">"/usr/local/bin/entrypoint.sh"</span><span class="token punctuation">]</span>
+</code></pre>
+<h3 id="explicação-do-dockerfile"><strong>Explicação do Dockerfile</strong></h3>
+<ol>
+<li>
+<p><strong>Base Image</strong>:</p>
+<pre class=" language-dockerfile"><code class="prism  language-dockerfile"><span class="token keyword">FROM</span> zabbix/zabbix<span class="token punctuation">-</span>web<span class="token punctuation">-</span>nginx<span class="token punctuation">-</span>mysql<span class="token punctuation">:</span>ubuntu<span class="token punctuation">-</span>6.4<span class="token punctuation">-</span>latest
+</code></pre>
+<p>Utiliza a imagem base do Zabbix que inclui Nginx e MySQL.</p>
+</li>
+<li>
+<p><strong>Usuário Root Temporário</strong>:</p>
+<pre class=" language-dockerfile"><code class="prism  language-dockerfile"><span class="token keyword">USER</span> root
+</code></pre>
+<p>Define o usuário root temporariamente para instalar pacotes e configurar o ambiente.</p>
+</li>
+<li>
+<p><strong>Atualização e Instalação de Pacotes</strong>:</p>
+<pre class=" language-dockerfile"><code class="prism  language-dockerfile"><span class="token keyword">RUN</span> apt<span class="token punctuation">-</span>get update \
+    &amp;&amp; apt<span class="token punctuation">-</span>get install <span class="token punctuation">-</span>y zabbix<span class="token punctuation">-</span>agent \
+    &amp;&amp; rm <span class="token punctuation">-</span>rf /var/lib/apt/lists/*
+</code></pre>
+<p>Atualiza os pacotes do sistema e instala o agente Zabbix. Em seguida, limpa o cache do <code>apt</code> para reduzir o tamanho da imagem.</p>
+</li>
+<li>
+<p><strong>Criação e Configuração de Diretórios</strong>:</p>
+<pre class=" language-dockerfile"><code class="prism  language-dockerfile"><span class="token keyword">RUN</span> mkdir <span class="token punctuation">-</span>p /var/run/zabbix &amp;&amp; chown zabbix<span class="token punctuation">:</span>zabbix /var/run/zabbix \
+    &amp;&amp; mkdir <span class="token punctuation">-</span>p /var/log/zabbix &amp;&amp; chown <span class="token punctuation">-</span>R zabbix<span class="token punctuation">:</span>zabbix /var/log/zabbix 
+</code></pre>
+<p>Cria os diretórios necessários para o PID e logs do agente Zabbix e define as permissões apropriadas para o usuário Zabbix.</p>
+</li>
+<li>
+<p><strong>Copiar Configuração do Zabbix Agent</strong>:</p>
+<pre class=" language-dockerfile"><code class="prism  language-dockerfile"><span class="token keyword">COPY</span> zabbix_agentd.conf /etc/zabbix/zabbix_agentd.conf
+</code></pre>
+<p>Copia o arquivo de configuração do agente Zabbix para o diretório de configuração dentro do contêiner.</p>
+</li>
+<li>
+<p><strong>Script de Entrada</strong>:</p>
+<pre class=" language-dockerfile"><code class="prism  language-dockerfile"><span class="token keyword">COPY</span> entrypoint.sh /usr/local/bin/entrypoint.sh
+<span class="token keyword">RUN</span> chmod +x /usr/local/bin/entrypoint.sh
+</code></pre>
+<p>Copia um script de entrada para o contêiner e define as permissões de execução.</p>
+</li>
+<li>
+<p><strong>Remover Privilégios de Root</strong>:</p>
+<pre class=" language-dockerfile"><code class="prism  language-dockerfile"><span class="token keyword">USER</span> 1997
+</code></pre>
+<p>Muda o usuário de volta ao padrão (usuário 1997) para melhorar a segurança, evitando a execução de processos como root.</p>
+</li>
+<li>
+<p><strong>Expor Portas</strong>:</p>
+<pre class=" language-dockerfile"><code class="prism  language-dockerfile"><span class="token keyword">EXPOSE</span> 10050
+</code></pre>
+<p>Expõe a porta 10050, utilizada pelo agente Zabbix.</p>
+</li>
+<li>
+<p><strong>Ponto de Entrada</strong>:</p>
+<pre class=" language-dockerfile"><code class="prism  language-dockerfile"><span class="token keyword">ENTRYPOINT</span> <span class="token punctuation">[</span><span class="token string">"/usr/local/bin/entrypoint.sh"</span><span class="token punctuation">]</span>
+</code></pre>
+<p>Define o script de entrada como ponto de entrada do contêiner.</p>
+</li>
+</ol>
+<h3 id="boas-práticas-adotadas"><strong>Boas Práticas Adotadas</strong></h3>
+<ol>
+<li><strong>Usuário Root Temporário</strong>: Usar o root apenas quando necessário para instalações e configurações críticas, voltando para um usuário menos privilegiado para operações regulares.</li>
+<li><strong>Limpeza do Cache</strong>: Redução do tamanho da imagem através da remoção do cache do apt após a instalação de pacotes.</li>
+<li><strong>Permissões de Diretório</strong>: Configuração adequada de permissões nos diretórios criados para evitar problemas de acesso e melhorar a segurança.</li>
+<li><strong>Segurança</strong>: Execução de processos com um usuário não-root sempre que possível para minimizar os riscos de segurança.</li>
+<li><strong>Documentação</strong>: Detalhamento dos passos e das razões por trás de cada comando para garantir manutenção fácil e compreensão clara do processo.</li>
+</ol>
+<h3 id="recomendações-adicionais"><strong>Recomendações Adicionais</strong></h3>
+<ul>
+<li><strong>Versão de Imagem Específica</strong>: Considere utilizar uma versão específica da imagem base em vez de <code>latest</code> para evitar problemas com alterações futuras.</li>
+<li><strong>Monitoramento de Segurança</strong>: Implemente verificações de segurança e atualize regularmente a imagem para incluir patches de segurança.</li>
+<li><strong>Ambiente de Teste</strong>: Teste o contêiner em um ambiente de desenvolvimento antes de implantação em produção para garantir que todas as configurações estão corretas e que o sistema funciona como esperado.</li>
+<li><strong>Automatização</strong>: Considere integrar a construção e teste do Dockerfile em pipelines CI/CD para garantir consistência e detecção precoce de problemas.</li>
+</ul>
+<h3 id="conclusão"><strong>Conclusão</strong></h3>
+<p>Esta documentação cobre a construção e configuração de um contêiner Docker que inclui a instalação do agente Zabbix, configurado para seguir as melhores práticas de segurança e DevOps. Implementar essas práticas garante um ambiente mais seguro, eficiente e fácil de manter.</p>
+</div>
+</body>
+
+</html>
