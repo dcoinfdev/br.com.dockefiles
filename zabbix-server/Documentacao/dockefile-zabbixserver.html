@@ -1,0 +1,173 @@
+﻿<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>dockefile-zabbixserver</title>
+  <link rel="stylesheet" href="https://stackedit.io/style.css" />
+</head>
+
+<body class="stackedit">
+  <div class="stackedit__html"><h2 id="documentação-do-dockerfile-para-o-zabbix-server-com-mysql-no-ubuntu-20.04-lts">Documentação do Dockerfile para o Zabbix Server com MySQL no Ubuntu 20.04 LTS</h2>
+<h3 id="introdução">Introdução</h3>
+<p>Este documento detalha a criação e configuração de um contêiner Docker para o Zabbix Server com MySQL utilizando a imagem base <code>zabbix/zabbix-server-mysql:ubuntu-6.4-latest</code>. Este guia é direcionado para DevOps Engineers e administradores de sistema que buscam implementar um ambiente de monitoramento robusto e seguro.</p>
+<h3 id="dockerfile">Dockerfile</h3>
+<p>Abaixo está o conteúdo do Dockerfile utilizado para criar a imagem Docker:</p>
+<pre class=" language-dockerfile"><code class="prism  language-dockerfile"><span class="token comment"># Use a imagem base do Zabbix Server com MySQL e Ubuntu 20.04 LTS</span>
+<span class="token keyword">FROM</span> zabbix/zabbix<span class="token punctuation">-</span>server<span class="token punctuation">-</span>mysql<span class="token punctuation">:</span>ubuntu<span class="token punctuation">-</span>6.4<span class="token punctuation">-</span>latest
+
+<span class="token comment"># Definir o usuário root temporariamente para instalações</span>
+<span class="token keyword">USER</span> root
+
+<span class="token comment"># Atualizar o sistema e instalar pacotes adicionais, incluindo o agente Zabbix</span>
+<span class="token keyword">RUN</span> apt<span class="token punctuation">-</span>get update \
+    &amp;&amp; apt<span class="token punctuation">-</span>get install <span class="token punctuation">-</span>y zabbix<span class="token punctuation">-</span>agent \
+    &amp;&amp; rm <span class="token punctuation">-</span>rf /var/lib/apt/lists/*
+
+<span class="token comment"># Crie o diretório necessário para o PID do Zabbix Agent</span>
+<span class="token keyword">RUN</span> mkdir <span class="token punctuation">-</span>p /var/run/zabbix &amp;&amp; chown zabbix<span class="token punctuation">:</span>zabbix /var/run/zabbix \
+    &amp;&amp; mkdir <span class="token punctuation">-</span>p /var/log/zabbix &amp;&amp; chown <span class="token punctuation">-</span>R zabbix<span class="token punctuation">:</span>zabbix /var/log/zabbix 
+
+<span class="token comment"># Copie o arquivo de configuração do Zabbix Agent para dentro do contêiner</span>
+<span class="token keyword">COPY</span> zabbix_agentd.conf /etc/zabbix/zabbix_agentd.conf
+
+<span class="token comment"># Copie o script de entrada para o contêiner e defina permissões</span>
+<span class="token keyword">COPY</span> entrypoint.sh /usr/local/bin/entrypoint.sh
+<span class="token keyword">RUN</span> chmod +x /usr/local/bin/entrypoint.sh
+
+<span class="token comment"># Remover privilégios de root e voltar ao usuário padrão</span>
+<span class="token keyword">USER</span> 1997
+
+<span class="token comment"># Expor portas, se necessário (por exemplo, para o agente Zabbix)</span>
+<span class="token keyword">EXPOSE</span> 10050
+
+<span class="token comment"># Iniciar o serviço do agente Zabbix</span>
+<span class="token keyword">ENTRYPOINT</span> <span class="token punctuation">[</span><span class="token string">"/usr/local/bin/entrypoint.sh"</span><span class="token punctuation">]</span>
+</code></pre>
+<h3 id="descrição-dos-passos">Descrição dos Passos</h3>
+<ol>
+<li>
+<p><strong>Imagem Base:</strong></p>
+<ul>
+<li><code>FROM zabbix/zabbix-server-mysql:ubuntu-6.4-latest</code></li>
+<li>Utiliza uma imagem base oficial do Zabbix Server com MySQL, baseada no Ubuntu 20.04 LTS.</li>
+</ul>
+</li>
+<li>
+<p><strong>Usuário Root Temporário:</strong></p>
+<ul>
+<li><code>USER root</code></li>
+<li>Define o usuário root temporariamente para realizar instalações necessárias.</li>
+</ul>
+</li>
+<li>
+<p><strong>Atualização do Sistema e Instalação de Pacotes:</strong></p>
+<ul>
+<li><code>RUN apt-get update &amp;&amp; apt-get install -y zabbix-agent &amp;&amp; rm -rf /var/lib/apt/lists/*</code></li>
+<li>Atualiza os pacotes do sistema e instala o agente Zabbix. Remove os arquivos temporários de lista de pacotes para reduzir o tamanho da imagem.</li>
+</ul>
+</li>
+<li>
+<p><strong>Criação de Diretórios Necessários:</strong></p>
+<ul>
+<li><code>RUN mkdir -p /var/run/zabbix &amp;&amp; chown zabbix:zabbix /var/run/zabbix &amp;&amp; mkdir -p /var/log/zabbix &amp;&amp; chown -R zabbix:zabbix /var/log/zabbix</code></li>
+<li>Cria os diretórios necessários para o PID e logs do agente Zabbix, e ajusta suas permissões.</li>
+</ul>
+</li>
+<li>
+<p><strong>Cópia e Configuração de Arquivos:</strong></p>
+<ul>
+<li>
+<p><code>COPY zabbix_agentd.conf /etc/zabbix/zabbix_agentd.conf</code></p>
+</li>
+<li>
+<p>Copia o arquivo de configuração do agente Zabbix para dentro do contêiner.</p>
+</li>
+<li>
+<p><code>COPY entrypoint.sh /usr/local/bin/entrypoint.sh</code></p>
+</li>
+<li>
+<p>Copia o script de entrada para dentro do contêiner e define as permissões de execução.</p>
+</li>
+</ul>
+</li>
+<li>
+<p><strong>Remoção de Privilégios de Root:</strong></p>
+<ul>
+<li><code>USER 1997</code></li>
+<li>Volta ao usuário padrão (ID 1997) para execução segura do contêiner.</li>
+</ul>
+</li>
+<li>
+<p><strong>Exposição de Portas:</strong></p>
+<ul>
+<li><code>EXPOSE 10050</code></li>
+<li>Expõe a porta 10050 para comunicação com o agente Zabbix.</li>
+</ul>
+</li>
+<li>
+<p><strong>Ponto de Entrada:</strong></p>
+<ul>
+<li><code>ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]</code></li>
+<li>Define o script de entrada que inicializa o serviço do agente Zabbix.</li>
+</ul>
+</li>
+</ol>
+<h3 id="considerações-de-segurança">Considerações de Segurança</h3>
+<ol>
+<li>
+<p><strong>Minimizar o Uso do Root:</strong></p>
+<ul>
+<li>Utilizamos o usuário root apenas para as etapas de instalação e configuração. O contêiner é executado com um usuário não privilegiado (ID 1997) para reduzir riscos de segurança.</li>
+</ul>
+</li>
+<li>
+<p><strong>Atualização e Limpeza de Pacotes:</strong></p>
+<ul>
+<li>A imagem é atualizada e os arquivos de lista de pacotes são removidos para minimizar a superfície de ataque e reduzir o tamanho da imagem.</li>
+</ul>
+</li>
+<li>
+<p><strong>Permissões Adequadas:</strong></p>
+<ul>
+<li>Diretórios críticos são criados e suas permissões são ajustadas para o usuário correto, garantindo que somente usuários autorizados possam acessá-los.</li>
+</ul>
+</li>
+</ol>
+<h3 id="melhores-práticas">Melhores Práticas</h3>
+<ul>
+<li>
+<p><strong>Documentação:</strong></p>
+<ul>
+<li>Documente cada etapa do Dockerfile para facilitar a compreensão e manutenção futura.</li>
+</ul>
+</li>
+<li>
+<p><strong>Manutenção de Imagens:</strong></p>
+<ul>
+<li>Atualize regularmente a imagem base e os pacotes instalados para garantir que o sistema esteja protegido contra vulnerabilidades conhecidas.</li>
+</ul>
+</li>
+<li>
+<p><strong>Segurança do Contêiner:</strong></p>
+<ul>
+<li>Execute contêineres com o mínimo de privilégios necessários e sempre verifique as permissões dos arquivos e diretórios copiados.</li>
+</ul>
+</li>
+</ul>
+<h3 id="conclusão">Conclusão</h3>
+<p>Este Dockerfile configura um contêiner Docker seguro e eficiente para o Zabbix Server com MySQL no Ubuntu 20.04 LTS. Seguindo as melhores práticas de DevOps e segurança, este ambiente de monitoramento está preparado para ser integrado em ambientes de produção.</p>
+<h3 id="contatos">Contatos</h3>
+<p>Para dúvidas ou suporte adicional, entre em contato com:</p>
+<ul>
+<li><strong>Nome:</strong> Daniel Correia de Oliveira</li>
+<li><strong>Email:</strong> <a href="mailto:correiadco@outlook.com">correiadco@outlook.com</a></li>
+<li><strong>Telefone:</strong> (21) 997375122 (WhatsApp)</li>
+</ul>
+<hr>
+<p>Este documento foi preparado considerando todas as melhores práticas e recomendações de segurança para garantir um ambiente de monitoramento eficiente e seguro.</p>
+</div>
+</body>
+
+</html>
