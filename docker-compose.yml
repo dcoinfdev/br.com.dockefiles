@@ -9,7 +9,6 @@ services:
       - "3306:3306"
     volumes:
       - ${MYSQL_DATA_PATH}:/var/lib/mysql
-      - ${MYSQL_DATA_RUN}:/var/run/zabbix
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
       MYSQL_DATABASE: ${MYSQL_DATABASE}
