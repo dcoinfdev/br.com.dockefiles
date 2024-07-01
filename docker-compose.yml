@@ -50,8 +50,6 @@ services:
       - "8080:8080"
     volumes:
       - ${ZABBIX_WEB_DATA_PATH}:/usr/share/zabbix
-      - ${ZABBIX_WEB_DATA_RUN}:/var/run/zabbix
-      - ${ZABBIX_WEB_DATA_LOG}:/var/log/zabbixX
     environment:
       DB_SERVER_HOST: ${DB_SERVER_HOST}
       DB_SERVER_PORT: ${DB_SERVER_PORT}
