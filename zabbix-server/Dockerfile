@@ -25,6 +25,8 @@ USER 1997
 
 # Expor portas, se necessário (por exemplo, para o agente Zabbix)
 EXPOSE 10050
+EXPOSE 10051
+EXPOSE 10052
 
 # Iniciar o serviço do agente Zabbix
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]

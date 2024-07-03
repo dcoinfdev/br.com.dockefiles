@@ -22,7 +22,7 @@ COPY entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
 
 # Exponha a porta padrão do Zabbix Agent
-EXPOSE 10050
+EXPOSE 10052
 
 # Defina o script de entrada como o comando inicial
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
